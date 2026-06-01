@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      =  "postgresql://ponto_user:${POSTGRES_PASSWORD:-ponto_secret}@postgres:5432/ponto_db"
+
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum EntryType {
+  CLOCK_IN
+  BREAK_START
+  BREAK_END
+  CLOCK_OUT
+}
+
+model Employee {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(EMPLOYEE)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  timeEntries   TimeEntry[]
+  schedules     WorkSchedule[]
+  adjustments   Adjustment[]  @relation("ApprovedBy")
+  auditLogs     AuditLog[]    @relation("PerformedBy")
+  refreshTokens RefreshToken[]
+
+  @@map("employees")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  employeeId String   @map("employee_id")
+  expiresAt  DateTime @map("expires_at")
+  revoked    Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model TimeEntry {
+  id         String    @id @default(uuid())
+  employeeId String    @map("employee_id")
+  type       EntryType
+  timestamp  DateTime
+  timezone   String    @default("America/Sao_Paulo")
+  deviceId   String?   @map("device_id")
+  manualEdit Boolean   @default(false) @map("manual_edit")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  employee    Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  adjustments Adjustment[]
+
+  @@index([employeeId, timestamp])
+  @@map("time_entries")
+}
+
+model Adjustment {
+  id          String   @id @default(uuid())
+  timeEntryId String   @map("time_entry_id")
+  oldValue    DateTime @map("old_value")
+  newValue    DateTime @map("new_value")
+  reason      String
+  approvedBy  String   @map("approved_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  timeEntry TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  approver  Employee  @relation("ApprovedBy", fields: [approvedBy], references: [id])
+
+  @@map("adjustments")
+}
+
+model WorkSchedule {
+  id            String   @id @default(uuid())
+  employeeId    String   @map("employee_id")
+  expectedStart String   @map("expected_start")
+  expectedEnd   String   @map("expected_end")
+  breakMinutes  Int      @default(60) @map("break_minutes")
+  weekdays      Int[]
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("work_schedules")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  entity      String
+  entityId    String   @map("entity_id")
+  action      String
+  oldValue    Json?    @map("old_value")
+  newValue    Json?    @map("new_value")
+  performedBy String   @map("performed_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  performer Employee @relation("PerformedBy", fields: [performedBy], references: [id])
+
+  @@index([entity, entityId])
+  @@index([performedBy])
+  @@map("audit_logs")
+}

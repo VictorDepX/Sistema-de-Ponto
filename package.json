@@ -1,0 +1,25 @@
+{
+  "name": "ponto-web",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev":        "turbo dev",
+    "build":      "turbo build",
+    "api":        "turbo dev --filter=api",
+    "web":        "turbo dev --filter=web",
+    "db:migrate": "turbo db:migrate --filter=api",
+    "db:seed":    "turbo db:seed --filter=api"
+  },
+  "devDependencies": {
+    "turbo":      "^1.13.4",
+    "typescript": "^5.4.5",
+    "prettier":   "^3.3.3"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "printWidth": 100
+  },
+  "engines": { "node": ">=18" }
+}

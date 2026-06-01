@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ponto_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ponto_db
+      POSTGRES_USER:     ponto_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ponto_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ponto_user -d ponto_db"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  api:
+    build:
+      context:    .
+      dockerfile: apps/api/Dockerfile
+    container_name: ponto_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV:       production
+      DATABASE_URL:   postgresql://ponto_user:${POSTGRES_PASSWORD:-ponto_secret}@postgres:5432/ponto_db
+      JWT_SECRET:     ${JWT_SECRET:-change_me_in_production_min_32_chars}
+      JWT_EXPIRES_IN: 15m
+      PORT:           3000
+      CORS_ORIGINS:   ${CORS_ORIGINS:-http://localhost}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context:    .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    container_name: ponto_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
