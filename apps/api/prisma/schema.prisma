@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      =  "postgresql://ponto_user:${POSTGRES_PASSWORD:-ponto_secret}@postgres:5432/ponto_db"
+  url      =  "postgresql://neondb_owner:npg_xSkRP82uADqE@ep-billowing-art-acsmrdo0-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 }
 
